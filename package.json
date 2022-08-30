@@ -1,0 +1,25 @@
+{
+  "name": "projeto12-batepapo-uol-api",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brunnaserafina/projeto12-batepapouol-api.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/brunnaserafina/projeto12-batepapouol-api/issues"
+  },
+  "homepage": "https://github.com/brunnaserafina/projeto12-batepapouol-api#readme",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.1"
+  }
+}
