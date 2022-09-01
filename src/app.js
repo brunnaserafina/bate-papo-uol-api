@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dayjs from "dayjs";
-import joi from "joi";
+import Joi from "joi";
 import { MongoClient } from "mongodb";
 import dotenv from "dotenv";
 dotenv.config();
@@ -16,12 +16,19 @@ const server = express();
 server.use(cors());
 server.use(express.json());
 
+const schema = Joi.object({
+  name: Joi.string().alphanum().min(3).max(10).required(),
+});
+
 server.post("/participants", async (req, res) => {
   const { name } = req.body;
   const hour = dayjs().format("HH:mm:ss");
 
   try {
-    if (!name) {
+    try {
+      await schema.validateAsync({ name });
+    } catch (err) {
+      console.error("Not validated");
       return res.sendStatus(422);
     }
 
@@ -29,7 +36,7 @@ server.post("/participants", async (req, res) => {
     const containName = await participantsCollect.findOne({ name: name });
 
     if (containName) {
-      console.log(containName);
+      //console.log(containName);
       return res.sendStatus(409);
     }
 
