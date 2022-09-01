@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import dayjs from "dayjs";
 import { MongoClient } from "mongodb";
 import dotenv from "dotenv";
 dotenv.config();
@@ -7,7 +8,7 @@ dotenv.config();
 const mongoClient = new MongoClient(process.env.MONGO_URI);
 let db;
 mongoClient.connect(() => {
-  db = mongoClient.db("test");
+  db = mongoClient.db("batepapouol");
 });
 
 const server = express();
