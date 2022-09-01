@@ -16,8 +16,14 @@ const server = express();
 server.use(cors());
 server.use(express.json());
 
-const schema = Joi.object({
+const schemaUser = Joi.object({
   name: Joi.string().alphanum().min(3).max(10).required(),
+});
+
+const schemaMessage = Joi.object({
+  to: Joi.string().min(1).required(),
+  text: Joi.string().min(1).required(),
+  type: Joi.valid("message").valid("private_message").optional(),
 });
 
 server.post("/participants", async (req, res) => {
@@ -26,7 +32,7 @@ server.post("/participants", async (req, res) => {
 
   try {
     try {
-      await schema.validateAsync({ name });
+      await schemaUser.validateAsync({ name });
     } catch (err) {
       console.error("Not validated");
       return res.sendStatus(422);
@@ -62,6 +68,41 @@ server.get("/participants", async (req, res) => {
   try {
     const participants = await db.collection("participants").find().toArray();
     res.send(participants);
+  } catch (err) {
+    console.error(err);
+    res.sendStatus(500);
+  }
+});
+
+server.post("/messages", async (req, res) => {
+  const { to, text, type } = req.body;
+  const name = req.headers.user;
+  const hour = dayjs().format("HH:mm:ss");
+
+  try {
+    try {
+      await schemaMessage.validateAsync({ to, text, type });
+    } catch (err) {
+      console.error(err);
+      return res.sendStatus(422);
+    }
+
+    const participantsCollect = db.collection("participants");
+    const containUser = await participantsCollect.findOne({ name: name });
+
+    if (!containUser) {
+      return res.sendStatus(422);
+    }
+
+    await db.collection("messages").insertOne({
+      from: name,
+      to,
+      text,
+      type,
+      time: hour,
+    });
+
+    return res.sendStatus(201);
   } catch (err) {
     console.error(err);
     res.sendStatus(500);
