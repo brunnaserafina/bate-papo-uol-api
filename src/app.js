@@ -109,4 +109,32 @@ server.post("/messages", async (req, res) => {
   }
 });
 
+server.get("/messages", async (req, res) => {
+  const limit = Number(req.query.limit);
+  const username = req.headers.user;
+
+  try {
+    const messages = await db.collection("messages").find().toArray();
+
+    const visibleMessages = messages.filter(
+      (value) =>
+        value.type === "message" ||
+        value.type === "status" ||
+        value.from === username ||
+        value.to === username
+    );
+
+    if (!limit) {
+      return res.send(messages);
+    }
+
+    const lastMessages = visibleMessages.slice(-limit);
+
+    res.send(lastMessages);
+  } catch (err) {
+    console.error(err);
+    res.sendStatus(500);
+  }
+});
+
 server.listen(5000, () => console.log("Listening on port 5000"));
