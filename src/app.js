@@ -17,24 +17,26 @@ server.use(cors());
 server.use(express.json());
 
 const schemaUser = Joi.object({
-  name: Joi.string().min(1).required(),
+  name: Joi.string().empty("").required(),
 });
 
 const schemaMessage = Joi.object({
-  to: Joi.string().min(1).required(),
-  text: Joi.string().min(1).required(),
+  to: Joi.string().empty("").required(),
+  text: Joi.string().empty("").required(),
   type: Joi.valid("message").valid("private_message").optional(),
 });
 
-async function updateParticipants() {
+setInterval(async () => {
   const participants = await db.collection("participants").find().toArray();
   const statusNow = Date.now();
   const hour = dayjs().format("HH:mm:ss");
 
   for (let i = 0; i < participants.length; i++) {
     let result = statusNow - participants[i].lastStatus;
-    if (result > 10000) {
-      db.collection("participants").deleteMany({
+    const maxTimeOn = 10000;
+
+    if (result > maxTimeOn) {
+      db.collection("participants").deleteOne({
         name: participants[i].name,
       });
 
@@ -47,33 +49,31 @@ async function updateParticipants() {
       });
     }
   }
-}
+}, 15000);
 
 server.post("/participants", async (req, res) => {
   const { name } = req.body;
   const hour = dayjs().format("HH:mm:ss");
-  setInterval(updateParticipants, 15000);
+
+  const validation = schemaUser.validate({ name }, { abortEarly: false });
+  if (validation.error) {
+    const err = validation.error.details.map((detail) => detail.message);
+    return res.status(422).send(err);
+  }
 
   try {
-    try {
-      await schemaUser.validateAsync({ name });
-    } catch (err) {
-      console.error("Not validated");
-      return res.sendStatus(422);
-    }
-
     const participantsCollect = db.collection("participants");
     const containName = await participantsCollect.findOne({ name: name });
 
     if (containName) {
-      //console.log(containName);
       return res.sendStatus(409);
     }
 
     const messagesCollect = db.collection("messages");
 
-    await participantsCollect.insertOne({ name, lastStatus: Date.now() });
-    await messagesCollect.insertOne({
+    participantsCollect.insertOne({ name, lastStatus: Date.now() });
+
+    messagesCollect.insertOne({
       from: name,
       to: "Todos",
       text: "entra na sala...",
@@ -89,7 +89,6 @@ server.post("/participants", async (req, res) => {
 });
 
 server.get("/participants", async (req, res) => {
-  setInterval(updateParticipants, 15000);
   try {
     const participants = await db.collection("participants").find().toArray();
     res.send(participants);
@@ -104,14 +103,16 @@ server.post("/messages", async (req, res) => {
   const name = req.headers.user;
   const hour = dayjs().format("HH:mm:ss");
 
-  try {
-    try {
-      await schemaMessage.validateAsync({ to, text, type });
-    } catch (err) {
-      console.error(err);
-      return res.sendStatus(422);
-    }
+  const validation = schemaMessage.validate(
+    { to, text, type },
+    { abortEarly: false }
+  );
+  if (validation.error) {
+    const err = validation.error.details.map((detail) => detail.message);
+    return res.status(422).send(err);
+  }
 
+  try {
     const participantsCollect = db.collection("participants");
     const containUser = await participantsCollect.findOne({ name: name });
 
@@ -119,7 +120,7 @@ server.post("/messages", async (req, res) => {
       return res.sendStatus(422);
     }
 
-    await db.collection("messages").insertOne({
+    db.collection("messages").insertOne({
       from: name,
       to,
       text,
@@ -137,8 +138,6 @@ server.post("/messages", async (req, res) => {
 server.get("/messages", async (req, res) => {
   const limit = Number(req.query.limit);
   const username = req.headers.user;
-
-  setInterval(updateParticipants, 15000);
 
   try {
     const messages = await db.collection("messages").find().toArray();
@@ -167,8 +166,6 @@ server.get("/messages", async (req, res) => {
 server.post("/status", async (req, res) => {
   const username = req.headers.user;
 
-  setInterval(updateParticipants, 15000);
-
   try {
     const participantContain = await db
       .collection("participants")
@@ -178,7 +175,7 @@ server.post("/status", async (req, res) => {
       return res.sendStatus(404);
     }
 
-    db.collection("participants").update(
+    db.collection("participants").updateOne(
       { name: username },
       { $set: { lastStatus: Date.now() } }
     );
