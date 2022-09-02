@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dayjs from "dayjs";
 import Joi from "joi";
+import { stripHtml } from "string-strip-html";
 import { MongoClient, ObjectId } from "mongodb";
 import dotenv from "dotenv";
 dotenv.config();
