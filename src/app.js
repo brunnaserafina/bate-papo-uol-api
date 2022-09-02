@@ -187,4 +187,30 @@ server.post("/status", async (req, res) => {
   }
 });
 
+server.delete("/messages/:idMessage", async (req, res) => {
+  const username = req.headers.user;
+  const { idMessage } = req.params;
+
+  try {
+    const message = await db.collection("messages").find({ from: username });
+
+    if (!message) {
+      res.sendStatus(401);
+    }
+
+    const findMessage = message.filter((value) => value._id === idMessage);
+
+    if (!findMessage) {
+      res.sendStatus(404);
+    }
+
+    await db.collection("messages").deleteOne({ _id: new ObjectId(idMessage) });
+
+    res.sendStatus(200);
+  } catch (err) {
+    console.error(err);
+    res.sendStatus(500);
+  }
+});
+
 server.listen(5000, () => console.log("Listening on port 5000"));
