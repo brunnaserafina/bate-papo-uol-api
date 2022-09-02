@@ -53,8 +53,10 @@ setInterval(async () => {
 }, 15000);
 
 server.post("/participants", async (req, res) => {
-  const { name } = req.body;
+  let { name } = req.body;
   const hour = dayjs().format("HH:mm:ss");
+
+  name = stripHtml(name.trim()).result;
 
   const validation = schemaUser.validate({ name }, { abortEarly: false });
   if (validation.error) {
@@ -100,9 +102,14 @@ server.get("/participants", async (req, res) => {
 });
 
 server.post("/messages", async (req, res) => {
-  const { to, text, type } = req.body;
-  const name = req.headers.user;
+  let { to, text, type } = req.body;
+  let name = req.headers.user;
   const hour = dayjs().format("HH:mm:ss");
+
+  to = stripHtml(to.trim()).result;
+  text = stripHtml(text.trim()).result;
+  type = stripHtml(type).result;
+  name = stripHtml(name.trim()).result;
 
   const validation = schemaMessage.validate(
     { to, text, type },
