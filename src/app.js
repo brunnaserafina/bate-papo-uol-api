@@ -2,13 +2,13 @@ import express from "express";
 import cors from "cors";
 import dayjs from "dayjs";
 import Joi from "joi";
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import dotenv from "dotenv";
 dotenv.config();
 
 const mongoClient = new MongoClient(process.env.MONGO_URI);
 let db;
-mongoClient.connect(() => {
+mongoClient.connect().then(() => {
   db = mongoClient.db("batepapouol");
 });
 
@@ -17,7 +17,7 @@ server.use(cors());
 server.use(express.json());
 
 const schemaUser = Joi.object({
-  name: Joi.string().alphanum().min(3).max(10).required(),
+  name: Joi.string().min(1).required(),
 });
 
 const schemaMessage = Joi.object({
@@ -131,6 +131,30 @@ server.get("/messages", async (req, res) => {
     const lastMessages = visibleMessages.slice(-limit);
 
     res.send(lastMessages);
+  } catch (err) {
+    console.error(err);
+    res.sendStatus(500);
+  }
+});
+
+server.post("/status", async (req, res) => {
+  const username = req.headers.user;
+
+  try {
+    const participantContain = await db
+      .collection("participants")
+      .findOne({ name: username });
+
+    if (!participantContain) {
+      return res.sendStatus(404);
+    }
+
+    db.collection("participants").update(
+      { name: username },
+      { $set: { lastStatus: Date.now() } }
+    );
+
+    res.sendStatus(200);
   } catch (err) {
     console.error(err);
     res.sendStatus(500);
