@@ -26,9 +26,33 @@ const schemaMessage = Joi.object({
   type: Joi.valid("message").valid("private_message").optional(),
 });
 
+async function updateParticipants() {
+  const participants = await db.collection("participants").find().toArray();
+  const statusNow = Date.now();
+  const hour = dayjs().format("HH:mm:ss");
+
+  for (let i = 0; i < participants.length; i++) {
+    let result = statusNow - participants[i].lastStatus;
+    if (result > 10000) {
+      db.collection("participants").deleteMany({
+        name: participants[i].name,
+      });
+
+      db.collection("messages").insertOne({
+        from: participants[i].name,
+        to: "Todos",
+        text: "sai da sala...",
+        type: "status",
+        time: hour,
+      });
+    }
+  }
+}
+
 server.post("/participants", async (req, res) => {
   const { name } = req.body;
   const hour = dayjs().format("HH:mm:ss");
+  setInterval(updateParticipants, 15000);
 
   try {
     try {
@@ -65,6 +89,7 @@ server.post("/participants", async (req, res) => {
 });
 
 server.get("/participants", async (req, res) => {
+  setInterval(updateParticipants, 15000);
   try {
     const participants = await db.collection("participants").find().toArray();
     res.send(participants);
@@ -113,6 +138,8 @@ server.get("/messages", async (req, res) => {
   const limit = Number(req.query.limit);
   const username = req.headers.user;
 
+  setInterval(updateParticipants, 15000);
+
   try {
     const messages = await db.collection("messages").find().toArray();
 
@@ -139,6 +166,8 @@ server.get("/messages", async (req, res) => {
 
 server.post("/status", async (req, res) => {
   const username = req.headers.user;
+
+  setInterval(updateParticipants, 15000);
 
   try {
     const participantContain = await db
