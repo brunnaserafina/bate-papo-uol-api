@@ -27,36 +27,36 @@ const schemaMessage = Joi.object({
   type: Joi.valid("message").valid("private_message").optional(),
 });
 
-setInterval(async () => {
-  const participants = await db.collection("participants").find().toArray();
-  const statusNow = Date.now();
-  const hour = dayjs().format("HH:mm:ss");
+// setInterval(async () => {
+//   const participants = await db.collection("participants").find().toArray();
+//   const statusNow = Date.now();
+//   const hour = dayjs().format("HH:mm:ss");
 
-  for (let i = 0; i < participants.length; i++) {
-    let result = statusNow - participants[i].lastStatus;
-    const maxTimeOn = 10000;
+//   for (let i = 0; i < participants.length; i++) {
+//     let result = statusNow - participants[i].lastStatus;
+//     const maxTimeOn = 10000;
 
-    if (result > maxTimeOn) {
-      db.collection("participants").deleteOne({
-        name: participants[i].name,
-      });
+//     if (result > maxTimeOn) {
+//       db.collection("participants").deleteOne({
+//         name: participants[i].name,
+//       });
 
-      db.collection("messages").insertOne({
-        from: participants[i].name,
-        to: "Todos",
-        text: "sai da sala...",
-        type: "status",
-        time: hour,
-      });
-    }
-  }
-}, 15000);
+//       db.collection("messages").insertOne({
+//         from: participants[i].name,
+//         to: "Todos",
+//         text: "sai da sala...",
+//         type: "status",
+//         time: hour,
+//       });
+//     }
+//   }
+// }, 15000);
 
 server.post("/participants", async (req, res) => {
   let { name } = req.body;
   const hour = dayjs().format("HH:mm:ss");
 
-  name = stripHtml(name.trim()).result;
+  name = stripHtml(name).result.trim();
 
   const validation = schemaUser.validate({ name }, { abortEarly: false });
   if (validation.error) {
@@ -106,10 +106,10 @@ server.post("/messages", async (req, res) => {
   let name = req.headers.user;
   const hour = dayjs().format("HH:mm:ss");
 
-  to = stripHtml(to.trim()).result;
-  text = stripHtml(text.trim()).result;
+  to = stripHtml(to).result.trim();
+  text = stripHtml(text).result.trim();
   type = stripHtml(type).result;
-  name = stripHtml(name.trim()).result;
+  name = stripHtml(name).result.trim();
 
   const validation = schemaMessage.validate(
     { to, text, type },
@@ -183,10 +183,9 @@ server.post("/status", async (req, res) => {
       return res.sendStatus(404);
     }
 
-    db.collection("participants").updateOne(
-      { name: username },
-      { $set: { lastStatus: Date.now() } }
-    );
+    await db
+      .collection("participants")
+      .updateOne({ name: username }, { $set: { lastStatus: Date.now() } });
 
     res.sendStatus(200);
   } catch (err) {
@@ -200,16 +199,17 @@ server.delete("/messages/:idMessage", async (req, res) => {
   const { idMessage } = req.params;
 
   try {
-    const message = await db.collection("messages").find({ from: username });
+    const message = await db
+      .collection("messages")
+      .find({ _id: ObjectId(idMessage) })
+      .toArray();
 
-    if (!message) {
-      res.sendStatus(401);
+    if (message.length === 0) {
+      return res.sendStatus(404);
     }
 
-    const findMessage = message.filter((value) => value._id === idMessage);
-
-    if (!findMessage) {
-      res.sendStatus(404);
+    if (message[0].from !== username) {
+      return res.sendStatus(401);
     }
 
     await db.collection("messages").deleteOne({ _id: new ObjectId(idMessage) });
